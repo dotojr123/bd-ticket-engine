@@ -33,4 +33,20 @@ describe("Fail-Fast Validator Test Suite", () => {
     expect(invalidResult.errors.length).toBe(2);
     expect(invalidResult.errors[0]).toContain("obsoleteTable");
   });
+
+  test("T009: auditFileContent (AST) não deve gerar falso positivo para nomes dentro de strings/comentários", () => {
+    const validTables = ["pedidos"];
+
+    // "obsoleteTableInsertSchema" aparece aqui só como texto (string/comentário), nunca como
+    // identificador de código real — o scanner por regex antigo acusaria erro; o baseado em AST não.
+    const contentWithStringsAndComments = `
+      // TODO: remover suporte legado a obsoleteTableInsertSchema no futuro
+      const explicacao = "não usar obsoleteTableInsertSchema em código novo";
+      import { pedidosInsertSchema } from "@/contracts/schemas/pedidos";
+      const val = pedidosInsertSchema.parse(data);
+    `;
+
+    const result = auditFileContent("dummy.ts", contentWithStringsAndComments, validTables);
+    expect(result.errors.length).toBe(0);
+  });
 });

@@ -3,6 +3,7 @@ import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useBDTicket } from "../lib/ui/provider";
 import { cn } from "../lib/ui/utils";
+import { RelationSelect } from "./RelationSelect";
 
 export interface DynamicFormProps {
   schema: any; // Zod schema gerado pelo codegen
@@ -87,7 +88,32 @@ export const DynamicForm: React.FC<DynamicFormProps> = ({
           );
         }
 
-        // 4. Renderização Headless Fallback dos Componentes Nativos
+        // 4. Renderizar Select Relacional Assíncrono para colunas de Foreign Key
+        if (colDef.isForeignKey && colDef.references) {
+          const [relatedTable] = colDef.references.split(".");
+          const labelField = colDef.metadata?.ui_control?.relation_label_field || "id";
+          return (
+            <div key={colName} className="flex flex-col gap-1">
+              <label className="text-sm font-medium">{labelText}</label>
+              <Controller
+                name={colName}
+                control={control}
+                render={({ field }) => (
+                  <RelationSelect
+                    relatedTable={relatedTable}
+                    labelField={labelField}
+                    value={field.value}
+                    onChange={field.onChange}
+                    disabled={isDisabled}
+                    error={fieldError}
+                  />
+                )}
+              />
+            </div>
+          );
+        }
+
+        // 5. Renderização Headless Fallback dos Componentes Nativos
         return (
           <div key={colName} className="flex flex-col gap-1">
             <label className="text-sm font-medium">{labelText}</label>

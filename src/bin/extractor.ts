@@ -1,13 +1,11 @@
 import { program } from "commander";
-import * as dotenv from "dotenv";
 import * as fs from "fs";
 import * as path from "path";
 import { extractPostgresSchema } from "../lib/db/postgres";
 import { extractD1Schema } from "../lib/db/d1";
 import { sortObjectDeep } from "../lib/utils/sort";
-
-// Carregar variáveis de ambiente do .env
-dotenv.config();
+import { logMetric } from "../lib/utils/logger";
+import { resolveEnvPaths, loadEnvFile } from "../lib/utils/env-paths";
 
 program
   .version("1.0.0")
@@ -17,12 +15,15 @@ program
   .option("-b, --d1-binding <binding>", "Caminho do arquivo de banco SQLite / D1 local", "local.db")
   .option("-c, --config <config>", "Caminho do arquivo local de metadados fallback", "bd-ticket.config.json")
   .option("-s, --strict", "Dispara erro e aborta se encontrar etiquetas de metadados JSON malformados", false)
+  .option("--dry-run", "Executa a extração e mostra um resumo sem escrever metadata.json em disco", false)
+  .option("-e, --env <env>", "Ambiente nomeado (ex.: staging, prod) — isola metadata.json em _reversa_sdd/<env>/ e carrega .env.<env> por cima do .env base")
   .action(async (options) => {
-    const outputDir = path.resolve("_reversa_sdd");
-    const outputPath = path.join(outputDir, "metadata.json");
+    loadEnvFile(options.env);
+    const { metadataDir: outputDir, metadataPath: outputPath } = resolveEnvPaths(options.env);
+    const startedAt = Date.now();
 
-    // Garantir que a pasta _reversa_sdd exista
-    if (!fs.existsSync(outputDir)) {
+    // Garantir que a pasta _reversa_sdd (ou _reversa_sdd/<env>) exista
+    if (!fs.existsSync(outputDir) && !options.dryRun) {
       fs.mkdirSync(outputDir, { recursive: true });
     }
 
@@ -71,12 +72,22 @@ program
       // Ordenação profunda determinística
       const sortedMetadata = sortObjectDeep(metadata);
 
+      const tableCount = Object.keys(tablesSchema).length;
+      const columnCount = Object.values(tablesSchema).reduce((sum: number, t: any) => sum + Object.keys(t.columns || {}).length, 0);
+
+      if (options.dryRun) {
+        console.log(`[DRY-RUN] ${tableCount} tabela(s) e ${columnCount} coluna(s) seriam extraídas. Nenhum arquivo foi escrito em disco.`);
+        logMetric("extract", { driver, tableCount, columnCount, durationMs: Date.now() - startedAt, dryRun: true });
+        process.exit(0);
+      }
+
       // Gravação atômica: cria arquivo temporário e faz rename
       const tempPath = `${outputPath}.tmp`;
       fs.writeFileSync(tempPath, JSON.stringify(sortedMetadata, null, 2), "utf-8");
       fs.renameSync(tempPath, outputPath);
 
       console.log(`[SUCCESS] Extração concluída com sucesso! Contrato gerado em: ${outputPath}`);
+      logMetric("extract", { driver, tableCount, columnCount, durationMs: Date.now() - startedAt, dryRun: false });
     } catch (e: any) {
       console.error(`[ERROR] Ocorreu uma falha crítica na extração:\n  => ${e.message}`);
       process.exit(1);

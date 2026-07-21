@@ -1,26 +1,58 @@
 {
   "name": "bd-ticket",
   "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
+  "description": "Motor Schema-Driven que gera validações Zod, tipos TS, rotas Hono/Express com CRUD real e hooks React Query a partir de metadados de banco PostgreSQL/SQLite.",
   "scripts": {
-    "build": "tsc -p tsconfig.build.json",
+    "build": "tsc -p tsconfig.build.json && node scripts/add-shebangs.js",
     "db:codegen": "tsx src/bin/codegen.ts",
     "db:extract-metadata": "tsx src/bin/extractor.ts",
     "db:validate": "tsx src/bin/validator.ts",
-    "test": "jest"
+    "db:migrate": "tsx src/bin/migrate.ts",
+    "test": "jest",
+    "typecheck": "tsc -p tsconfig.build.json --noEmit",
+    "scan:secrets": "node scripts/scan-secrets.js",
+    "prepare": "husky",
+    "prepublishOnly": "npm run typecheck && npm test && npm run build"
   },
-  "keywords": [],
+  "bin": {
+    "bd-ticket-extract": "dist/bin/extractor.js",
+    "bd-ticket-codegen": "dist/bin/codegen.js",
+    "bd-ticket-validate": "dist/bin/validator.js",
+    "bd-ticket-migrate": "dist/bin/migrate.js"
+  },
+  "files": [
+    "dist",
+    "scripts/transplant.js",
+    "LICENSE",
+    "README.md",
+    "CHANGELOG.md",
+    ".env.example"
+  ],
+  "keywords": [
+    "schema-driven",
+    "codegen",
+    "postgresql",
+    "sqlite",
+    "hono",
+    "zod",
+    "rbac",
+    "crud"
+  ],
   "author": "",
-  "license": "ISC",
+  "license": "MIT",
+  "engines": {
+    "node": ">=20"
+  },
   "type": "commonjs",
   "dependencies": {
     "@hono/zod-validator": "^0.9.0",
     "@hookform/resolvers": "^5.4.0",
+    "@tanstack/react-query": "^5.101.3",
     "better-sqlite3": "^12.11.1",
     "clsx": "^2.1.1",
     "commander": "^15.0.0",
     "dotenv": "^17.4.2",
+    "drizzle-orm": "^0.45.2",
     "hono": "^4.12.31",
     "pg": "^8.22.0",
     "react": "^19.2.7",
@@ -31,12 +63,18 @@
   },
   "devDependencies": {
     "@types/better-sqlite3": "^7.6.13",
+    "@types/express": "^5.0.6",
     "@types/jest": "^30.0.0",
     "@types/node": "^26.1.1",
     "@types/pg": "^8.20.0",
     "@types/react": "^19.2.17",
     "@types/react-dom": "^19.2.3",
+    "@types/supertest": "^7.2.1",
+    "express": "^5.2.1",
+    "husky": "^9.1.7",
     "jest": "^30.4.2",
+    "pg-mem": "^3.0.14",
+    "supertest": "^7.2.2",
     "ts-jest": "^29.4.11",
     "tsx": "^4.23.1",
     "typescript": "^5.5.4"

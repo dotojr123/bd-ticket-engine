@@ -2,6 +2,16 @@ import Database from "better-sqlite3";
 import * as fs from "fs";
 import { TableDefinition, ColumnDefinition } from "./postgres";
 
+const VALID_IDENTIFIER = /^[A-Za-z_][A-Za-z0-9_]*$/;
+
+/** Garante que um identificador vindo do próprio catálogo do banco é seguro para interpolar em PRAGMA. */
+function assertSafeIdentifier(name: string): string {
+  if (!VALID_IDENTIFIER.test(name)) {
+    throw new Error(`Identificador de tabela/coluna inesperado ou inseguro: '${name}'`);
+  }
+  return name;
+}
+
 /**
  * Conecta ao SQLite e extrai a estrutura física, mesclando com o config JSON local.
  */
@@ -24,17 +34,32 @@ export async function extractD1Schema(
       }
     }
 
-    // 2. Extrai as tabelas físicas do SQLite
+    // 2. Extrai as tabelas físicas do SQLite (nomes vêm do próprio catálogo, tratados como confiáveis
+    //    mas ainda assim validados contra um whitelist de identificador antes de interpolar em PRAGMA)
     const tablesRes = db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%';").all();
 
     for (const tableRow of tablesRes as any[]) {
-      const tableName = tableRow.name;
+      const tableName = assertSafeIdentifier(tableRow.name);
       tables[tableName] = { columns: {} };
 
+      // Opções de tabela (soft_delete, owner_field) vindas do config local
+      const tableOptions = localConfig.tables?.[tableName]?.options;
+      if (tableOptions) {
+        tables[tableName].options = tableOptions;
+      }
+
       // Obter colunas e PK
-      const columnsRes = db.prepare(`PRAGMA table_info(${tableName});`).all();
-      // Obter FKs
-      const fksRes = db.prepare(`PRAGMA foreign_key_list(${tableName});`).all() as any[];
+      const columnsRes = db.prepare(`PRAGMA table_info("${tableName}");`).all();
+      // Obter FKs (better-sqlite3/SQLite já expõe a regra de ON DELETE por linha)
+      const fksRes = db.prepare(`PRAGMA foreign_key_list("${tableName}");`).all() as any[];
+      // Obter índices para inferir cardinalidade 1:1 em colunas FK cobertas por UNIQUE
+      const indexListRes = db.prepare(`PRAGMA index_list("${tableName}");`).all() as any[];
+      const uniqueColumns = new Set<string>();
+      for (const idx of indexListRes) {
+        if (!idx.unique) continue;
+        const idxInfo = db.prepare(`PRAGMA index_info("${idx.name}");`).all() as any[];
+        if (idxInfo.length === 1) uniqueColumns.add(idxInfo[0].name);
+      }
 
       for (const colRow of columnsRes as any[]) {
         const columnName = colRow.name;
@@ -56,6 +81,8 @@ export async function extractD1Schema(
           isPrimaryKey,
           isForeignKey,
           references,
+          onDelete: fk ? (fk.on_delete || "NO ACTION") : null,
+          cardinality: isForeignKey ? (uniqueColumns.has(columnName) ? "one-to-one" : "many-to-one") : null,
           metadata
         };
       }

@@ -1,8 +1,17 @@
 {
-  "generated_at": "2026-07-21T05:02:58.792Z",
+  "generated_at": "2026-07-21T08:15:13.082Z",
   "files": {
-    "C:\\Users\\Doto\\Desktop\\PROJETOS-2026\\REVERSA-V3\\BD-TICKET\\src\\contracts\\schemas\\test_pedidos.ts": "b74b95026cf053c27fc7306be1b47847176f93200621b726de68531461f9a83f",
+    "C:\\Users\\Doto\\Desktop\\PROJETOS-2026\\REVERSA-V3\\BD-TICKET\\src\\contracts\\schemas\\test_clientes.ts": "a4fd3f520b4fc603448ead410b9b63590c9d8a4bc070f2a733ef3f5884522102",
+    "C:\\Users\\Doto\\Desktop\\PROJETOS-2026\\REVERSA-V3\\BD-TICKET\\src\\contracts\\types\\test_clientes.ts": "6f10036d8b13c03e06c9436b6731fcdcea625484438e57e2fe08f85275d4c8cf",
+    "C:\\Users\\Doto\\Desktop\\PROJETOS-2026\\REVERSA-V3\\BD-TICKET\\src\\contracts\\router\\test_clientes.ts": "1732d0053faf0be8654b44f0f1e4ef80881c65a1c6d14fe78d69300b0b234609",
+    "C:\\Users\\Doto\\Desktop\\PROJETOS-2026\\REVERSA-V3\\BD-TICKET\\src\\contracts\\router-express\\test_clientes.ts": "9b93591d2b7985afc1bdb3aa416f2afbf6bb1a9895f138885b3e00ed36126713",
+    "C:\\Users\\Doto\\Desktop\\PROJETOS-2026\\REVERSA-V3\\BD-TICKET\\src\\contracts\\hooks\\test_clientes.ts": "ad13cbabc8cfdbc0a00f36e5f223565a89104cef18115171987f68ce450ea908",
+    "C:\\Users\\Doto\\Desktop\\PROJETOS-2026\\REVERSA-V3\\BD-TICKET\\src\\contracts\\drizzle\\test_clientes.ts": "a169c81494e99cfbb82c6edbcb3e5d8a009d7f840bdb0e91bf291610d1842b07",
+    "C:\\Users\\Doto\\Desktop\\PROJETOS-2026\\REVERSA-V3\\BD-TICKET\\src\\contracts\\schemas\\test_pedidos.ts": "24c351bf1701f86c78377977d14f10ca25fedf37c5b54f6b170ec42765dd2c9f",
     "C:\\Users\\Doto\\Desktop\\PROJETOS-2026\\REVERSA-V3\\BD-TICKET\\src\\contracts\\types\\test_pedidos.ts": "dfcab7981d97351028bfaf0b00bfe9bd1b4f3101f4d973147dc5e4dd38775e8b",
-    "C:\\Users\\Doto\\Desktop\\PROJETOS-2026\\REVERSA-V3\\BD-TICKET\\src\\contracts\\router\\test_pedidos.ts": "b94b549a4c5c1b82c59c83d31d9fa324bdf93bc67f10d35ef8d7a827edf658cf"
+    "C:\\Users\\Doto\\Desktop\\PROJETOS-2026\\REVERSA-V3\\BD-TICKET\\src\\contracts\\router\\test_pedidos.ts": "2ebc6c360b27266cd47768edfec5e11818feb3db6f7af39328bc79aaf1d5acef",
+    "C:\\Users\\Doto\\Desktop\\PROJETOS-2026\\REVERSA-V3\\BD-TICKET\\src\\contracts\\router-express\\test_pedidos.ts": "288e1e60a07f4ed83d14a8fb419a0690f133a677c0ba5928d4c0f6e89fc246cb",
+    "C:\\Users\\Doto\\Desktop\\PROJETOS-2026\\REVERSA-V3\\BD-TICKET\\src\\contracts\\hooks\\test_pedidos.ts": "67eece0cf6d236a132fb5a783c803e0e330a7361bb89fd15300a8dde398c20a1",
+    "C:\\Users\\Doto\\Desktop\\PROJETOS-2026\\REVERSA-V3\\BD-TICKET\\src\\contracts\\drizzle\\test_pedidos.ts": "0a67728cef0a79ec0936a0b3ca0cdc8383098afcaabafc02abd8dc752698a451"
   }
 }

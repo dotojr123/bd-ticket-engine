@@ -1,0 +1,2 @@
+npm run scan:secrets
+npx tsx src/bin/validator.ts --warn-only

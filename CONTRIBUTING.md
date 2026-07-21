@@ -15,12 +15,18 @@ Obrigado pelo seu interesse em contribuir para o **BD-Ticket Engine**! Este docu
 git clone https://github.com/doto/bd-ticket-engine.git
 cd bd-ticket-engine
 npm install
+cp .env.example .env   # preencha DATABASE_URL/JWT_SECRET conforme necessário
 ```
 
+`npm install` também registra os git hooks locais (via `husky`, script `prepare`). O pre-commit
+roda um scanner de segredos (`npm run scan:secrets`) e o Fail-Fast Validator em modo aviso —
+nenhum dos dois deve ser contornado com `--no-verify` fora de emergências reais.
+
 ### 3. Rodando os Testes locais
-Nosso pipeline de testes é baseado no Jest e valida drivers físicos, geradores de código, utilitários CSS e o validador estático:
+Nosso pipeline de testes é baseado no Jest e valida drivers físicos, geradores de código, utilitários CSS, o validador estático (AST) e um fluxo de integração end-to-end (CRUD real contra SQLite em memória):
 ```bash
 npm run test
+npm run typecheck   # tsc --noEmit estrito, sem `any` implícito
 ```
 
 ---

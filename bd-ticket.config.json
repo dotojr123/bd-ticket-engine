@@ -17,6 +17,52 @@
             "component": "SelectInput",
             "visible_in_views": ["admin_table", "partner_panel"]
           }
+        },
+        "cliente_id": {
+          "label": "Cliente",
+          "validation": {
+            "required": true
+          },
+          "permissions": {
+            "read": ["user", "parceiro", "admin"],
+            "write": ["parceiro", "admin"]
+          },
+          "ui_control": {
+            "component": "RelationSelect",
+            "visible_in_views": ["admin_table", "partner_panel"],
+            "relation_label_field": "nome"
+          }
+        }
+      }
+    },
+    "test_clientes": {
+      "options": {
+        "soft_delete": true
+      },
+      "columns": {
+        "nome": {
+          "label": "Nome do Cliente",
+          "validation": { "required": true },
+          "permissions": {
+            "read": ["user", "parceiro", "admin"],
+            "write": ["admin"]
+          },
+          "ui_control": {
+            "component": "TextInput",
+            "visible_in_views": ["admin_table"]
+          }
+        },
+        "email": {
+          "label": "E-mail",
+          "validation": { "required": true },
+          "permissions": {
+            "read": ["admin"],
+            "write": ["admin"]
+          },
+          "ui_control": {
+            "component": "TextInput",
+            "visible_in_views": ["admin_table"]
+          }
         }
       }
     }

@@ -1,42 +1,126 @@
 import { Hono } from "hono";
 import { zValidator } from "@hono/zod-validator";
 import { test_pedidosInsertSchema, test_pedidosUpdateSchema } from "../schemas/test_pedidos";
+import { requireRole, getAuthUser } from "../../lib/runtime/auth";
+import { rateLimit } from "../../lib/runtime/rate-limit";
+import { logAudit } from "../../lib/runtime/audit-log";
+import * as crud from "../../lib/runtime/crud-engine";
+import { getDbClient } from "../../lib/runtime/db-client";
 
 export const test_pedidosRouter = new Hono();
 
-// Middleware RBAC de Escrita
+// Metadados físicos da tabela, embutidos em tempo de geração (não são input de usuário)
+const TABLE = "test_pedidos";
+const PRIMARY_KEY = "id";
+const COLUMN_NAMES = ["cliente_id","id","status"];
+const SOFT_DELETE = false;
+const OWNER_FIELD: string | null = null;
+const FOREIGN_KEYS: { column: string; table: string; refColumn: string }[] = [
+  {
+    "column": "cliente_id",
+    "table": "test_clientes",
+    "refColumn": "id"
+  }
+];
+
+// Middleware RBAC de Escrita (JWT real verificado via requireRole)
 const rbacWrite = async (c: any, next: any) => {
-  const userRole = c.req.header("X-User-Role");
   const allowed = ["parceiro","admin"];
-  if (allowed.length > 0 && !allowed.includes(userRole)) {
-    return c.json({ error: "Forbidden - Acesso de escrita negado" }, 403);
-  }
-  await next();
+  return requireRole(allowed)(c, next);
 };
 
-// Middleware RBAC de Leitura
+// Middleware RBAC de Leitura (JWT real verificado via requireRole)
 const rbacRead = async (c: any, next: any) => {
-  const userRole = c.req.header("X-User-Role");
   const allowed = ["user","parceiro","admin"];
-  if (allowed.length > 0 && !allowed.includes(userRole)) {
-    return c.json({ error: "Forbidden - Acesso de leitura negado" }, 403);
-  }
-  await next();
+  return requireRole(allowed)(c, next);
 };
 
-// Endpoints Planos (CRUD)
+test_pedidosRouter.use("*", rateLimit());
+
+// Endpoints CRUD reais (dados persistidos de fato via DbClient, sem mocks)
 test_pedidosRouter.get("/", rbacRead, async (c) => {
-  return c.json({ message: "Mock GET list for test_pedidos" });
+  const db = getDbClient();
+  const user = getAuthUser(c);
+  const listOpts = crud.parseListQuery(c.req.query(), COLUMN_NAMES);
+  const result = await crud.listRecords(TABLE, {
+    ...listOpts,
+    softDelete: SOFT_DELETE,
+    ownerField: OWNER_FIELD,
+    user,
+    bypassOwnerFilter: user?.role === "admin"
+  }, db);
+  logAudit({ action: "read", table: TABLE, userId: user?.sub, userRole: user?.role });
+  return c.json(result);
+});
+
+test_pedidosRouter.get("/:id", rbacRead, async (c) => {
+  const db = getDbClient();
+  const user = getAuthUser(c);
+  const record = await crud.getRecord(TABLE, PRIMARY_KEY, c.req.param("id"), {
+    softDelete: SOFT_DELETE,
+    ownerField: OWNER_FIELD,
+    user,
+    bypassOwnerFilter: user?.role === "admin"
+  }, db);
+  if (!record) return c.json({ error: "Registro não encontrado" }, 404);
+  logAudit({ action: "read", table: TABLE, recordId: c.req.param("id"), userId: user?.sub, userRole: user?.role });
+  return c.json(record);
 });
 
 test_pedidosRouter.post("/", rbacWrite, zValidator("json", test_pedidosInsertSchema), async (c) => {
-  return c.json({ message: "Mock POST create for test_pedidos" });
+  const db = getDbClient();
+  const user = getAuthUser(c);
+  const data = c.req.valid("json");
+  try {
+    const created = await db.transaction(async (trx) => {
+      await crud.assertForeignKeysExist(FOREIGN_KEYS, data, trx);
+      return crud.createRecord(TABLE, data, { ownerField: OWNER_FIELD, user }, trx);
+    });
+    logAudit({ action: "create", table: TABLE, recordId: (created as any)?.[PRIMARY_KEY], userId: user?.sub, userRole: user?.role });
+    return c.json(created, 201);
+  } catch (err: any) {
+    const { status, body } = crud.normalizeDbError(err, db.driver);
+    return c.json(body, status as any);
+  }
 });
 
 test_pedidosRouter.put("/:id", rbacWrite, zValidator("json", test_pedidosUpdateSchema), async (c) => {
-  return c.json({ message: "Mock PUT update for test_pedidos" });
+  const db = getDbClient();
+  const user = getAuthUser(c);
+  const data = c.req.valid("json");
+  try {
+    const updated = await db.transaction(async (trx) => {
+      await crud.assertForeignKeysExist(FOREIGN_KEYS, data, trx);
+      return crud.updateRecord(TABLE, PRIMARY_KEY, c.req.param("id"), data, {
+        ownerField: OWNER_FIELD,
+        user,
+        bypassOwnerFilter: user?.role === "admin"
+      }, trx);
+    });
+    if (!updated) return c.json({ error: "Registro não encontrado" }, 404);
+    logAudit({ action: "update", table: TABLE, recordId: c.req.param("id"), userId: user?.sub, userRole: user?.role });
+    return c.json(updated);
+  } catch (err: any) {
+    const { status, body } = crud.normalizeDbError(err, db.driver);
+    return c.json(body, status as any);
+  }
 });
 
 test_pedidosRouter.delete("/:id", rbacWrite, async (c) => {
-  return c.json({ message: "Mock DELETE for test_pedidos" });
+  const db = getDbClient();
+  const user = getAuthUser(c);
+  try {
+    const result = await crud.deleteRecord(TABLE, PRIMARY_KEY, c.req.param("id"), {
+      softDelete: SOFT_DELETE,
+      ownerField: OWNER_FIELD,
+      user,
+      bypassOwnerFilter: user?.role === "admin"
+    }, db);
+    if (!result.deleted) return c.json({ error: "Registro não encontrado" }, 404);
+    logAudit({ action: "delete", table: TABLE, recordId: c.req.param("id"), userId: user?.sub, userRole: user?.role });
+    return c.body(null, 204);
+  } catch (err: any) {
+    const { status, body } = crud.normalizeDbError(err, db.driver);
+    return c.json(body, status as any);
+  }
 });

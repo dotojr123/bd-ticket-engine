@@ -63,13 +63,33 @@ O script criará a estrutura física de arquivos, injetará os scripts npm utili
 Varre o catálogo de tabelas físicas (`information_schema` do PostgreSQL ou `PRAGMA table_info` do SQLite local) decodificando comentários lógicos em JSON (etiquetas de campos) e exporta um arquivo intermediário determinístico `_reversa_sdd/metadata.json` ordenado alfabeticamente.
 
 ### 2. ⚙️ Codegen Engine
-Carrega o `metadata.json` e escreve automaticamente esquemas Zod (`Insert/Update/Select`), tipos TypeScript estáticos inferidos e rotas do Hono vinculadas a validadores `zValidator` e middlewares RBAC. Grava um manifesto SHA-256 de todas as saídas geradas para monitorar alterações locais.
+Carrega o `metadata.json` (validado estruturalmente antes de rodar) e escreve automaticamente esquemas Zod (`Insert/Update/Select`), tipos TypeScript inferidos, rotas Hono com **CRUD real** (via `DbClient` Postgres/SQLite, paginação/ordenação/filtro, checagem de integridade de FK, soft delete opcional, transações) protegidas por RBAC verificado via **JWT real**, e hooks React Query tipados para o frontend consumir sem escrever `fetch` manualmente. Grava um manifesto SHA-256 de todas as saídas geradas para monitorar alterações locais.
 
 ### 3. ⚛️ Dynamic Headless UI
-Uma biblioteca React funcional que consome as definições de metadados e schemas gerados para auto-montar formulários reativos do React Hook Form com validação local, propagação híbrida de privilégios (`BDTicketProvider`) e suporte a slots customizados.
+Uma biblioteca React funcional que consome as definições de metadados e schemas gerados para auto-montar formulários reativos do React Hook Form com validação local, propagação híbrida de privilégios (`BDTicketProvider`), campos de relacionamento (`<RelationSelect />` assíncrono para chaves estrangeiras) e suporte a slots customizados.
 
 ### 4. 🚨 Fail-Fast Validator
-Auditor estático CLI para ambientes locais e esteiras de CI/CD (e.g. GitHub Actions). Compara os hashes físicos dos contratos contra os SHA-256 do manifesto e escaneia recursivamente o diretório `src/` em busca de chamadas órfãs a esquemas obsoletos, quebrando o build (Exit Code 1) em caso de drift.
+Auditor estático CLI para ambientes locais e esteiras de CI/CD (e.g. GitHub Actions). Compara os hashes físicos dos contratos contra os SHA-256 do manifesto e varre a AST real (TypeScript Compiler API, não regex em texto bruto) do diretório `src/` em busca de chamadas órfãs a esquemas obsoletos, quebrando o build (Exit Code 1) em caso de drift. Suporta `--fix` para regenerar contratos automaticamente quando detecta drift.
+
+### 5. 🔀 Migrations
+Compara snapshots sucessivos do `metadata.json` (isolados por ambiente via `--env`) e gera migrações SQL `UP`/`DOWN` reversíveis. Mudanças destrutivas (coluna/tabela removida, tipo alterado) exigem confirmação explícita via `--force`.
+
+### 6. 🔌 Portabilidade de Framework
+O núcleo de segurança (JWT/RBAC, rate limiting) é agnóstico de framework HTTP (`src/lib/runtime/core/`). Além do router Hono (default), o codegen também gera um router **Express** equivalente (`--target express`), reaproveitando o mesmo `crud-engine` — mesma lógica de negócio, dois frameworks. Opcionalmente, também gera um schema **Drizzle ORM** tipado por tabela (`--drizzle postgres|sqlite`) como camada de acesso a dados adicional para quem já fixou o dialeto do projeto.
+
+---
+
+## 🔐 Variáveis de Ambiente
+
+| Variável | Uso | Obrigatória quando |
+|----------|-----|---------------------|
+| `DATABASE_URL` | Connection string do PostgreSQL | `--driver postgres` no extrator, ou `DB_DRIVER=postgres` em runtime |
+| `DB_DRIVER` | `postgres` ou `sqlite` — driver usado pelas rotas geradas em runtime | Sempre (default: `sqlite`) |
+| `SQLITE_PATH` | Caminho do arquivo SQLite usado em runtime | `DB_DRIVER=sqlite` (default: `local.db`) |
+| `JWT_SECRET` | Chave usada para verificar a assinatura dos JWTs recebidos nas rotas geradas | Sempre que uma rota gerada aceitar tráfego real |
+| `PROJECT_NAME` | Nome gravado no `metadata.json` | Opcional |
+
+Veja `.env.example` para o arquivo completo.
 
 ---
 
@@ -79,10 +99,13 @@ Ao injetar o motor, os seguintes comandos de CLI ficam disponíveis no `package.
 
 | Comando | Descrição |
 |---------|-----------|
-| `npm run db:extract-metadata` | Executa o extrator de esquemas gerando o `metadata.json`. |
-| `npm run db:codegen` | Executa o gerador de schemas Zod, tipos TS, rotas Hono e hashes. |
-| `npm run db:validate` | Executa o auditor de drift SHA-256 e varredura de referências órfãs de UI. |
-| `npm run test` | Roda a suíte completa de testes automatizados via Jest. |
+| `npm run db:extract-metadata` | Executa o extrator de esquemas gerando o `metadata.json` (aceita `--dry-run`, `--env <nome>`). |
+| `npm run db:codegen` | Executa o gerador de schemas Zod, tipos TS, rotas e hooks React Query (aceita `--dry-run`, `--check-only`, `--env <nome>`, `--target hono\|express\|both`, `--drizzle postgres\|sqlite`). |
+| `npm run db:validate` | Executa o auditor de drift SHA-256 e varredura AST de referências órfãs de UI (aceita `--warn-only`, `--fix` para regenerar contratos automaticamente ao detectar drift). |
+| `npm run db:migrate` | Gera migrações SQL `UP`/`DOWN` a partir do diff de metadata (aceita `--driver`, `--force`, `--dry-run`, `--env <nome>`). |
+| `npm run test` | Roda a suíte completa de testes automatizados via Jest — inclui testes de integração end-to-end reais contra SQLite, Postgres (via `pg-mem`), Express (via `supertest`) e Drizzle ORM, sem mocks. |
+| `npm run typecheck` | Compilação estrita `tsc --noEmit`, sem emitir arquivos. |
+| `npm run scan:secrets` | Varre o commit staged atrás de segredos óbvios (também roda automaticamente no pre-commit). |
 
 ---
 

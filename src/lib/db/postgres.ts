@@ -6,11 +6,23 @@ export interface ColumnDefinition {
   isPrimaryKey: boolean;
   isForeignKey: boolean;
   references: string | null;
+  /** Regra de exclusão referencial (ON DELETE) do banco físico, quando isForeignKey=true. */
+  onDelete?: "CASCADE" | "RESTRICT" | "SET NULL" | "SET DEFAULT" | "NO ACTION" | null;
+  /** Cardinalidade inferida do relacionamento a partir de constraints físicas (FK também UNIQUE => 1:1). */
+  cardinality?: "one-to-one" | "many-to-one" | null;
   metadata: any;
+}
+
+export interface TableOptions {
+  /** Quando true, DELETE gerado marca deleted_at em vez de remover a linha fisicamente. */
+  soft_delete?: boolean;
+  /** Nome da coluna que identifica o dono do registro, usada para permissão em nível de linha. */
+  owner_field?: string;
 }
 
 export interface TableDefinition {
   columns: { [columnName: string]: ColumnDefinition };
+  options?: TableOptions;
 }
 
 export interface SchemaDefinition {
@@ -19,8 +31,20 @@ export interface SchemaDefinition {
   tables: { [tableName: string]: TableDefinition };
 }
 
+function parseMetadataComment(rawComment: string | null): any {
+  if (!rawComment) return {};
+  try {
+    const parsed = JSON.parse(rawComment);
+    return parsed.metadata || parsed;
+  } catch {
+    return { _raw_comment: rawComment, _invalid_json: true };
+  }
+}
+
 /**
  * Conecta ao PostgreSQL e extrai o catálogo físico com as etiquetas nos comentários.
+ * Usa um número fixo de consultas (independente da quantidade de tabelas) para evitar
+ * o padrão N+1 de uma query por tabela.
  */
 export async function extractPostgresSchema(connectionString: string): Promise<{ [tableName: string]: TableDefinition }> {
   const client = new Client({ connectionString });
@@ -29,87 +53,109 @@ export async function extractPostgresSchema(connectionString: string): Promise<{
   try {
     const tables: { [tableName: string]: TableDefinition } = {};
 
-    // 1. Obter tabelas da base
+    // 1. Tabelas base do schema public
     const tablesRes = await client.query(`
-      SELECT 
-        t.table_name
-      FROM 
-        information_schema.tables t
-      WHERE 
-        t.table_schema = 'public' 
-        AND t.table_type = 'BASE TABLE';
+      SELECT table_name
+      FROM information_schema.tables
+      WHERE table_schema = 'public' AND table_type = 'BASE TABLE';
     `);
-
     for (const row of tablesRes.rows) {
-      const tableName = row.table_name;
-      tables[tableName] = { columns: {} };
+      tables[row.table_name] = { columns: {} };
+    }
 
-      // 2. Obter colunas e comentários de cada coluna
-      const columnsRes = await client.query(`
-        SELECT 
-          cols.column_name,
-          cols.data_type,
-          cols.is_nullable,
-          pg_catalog.col_description(c.oid, cols.ordinal_position::int) as column_comment,
-          (
-            SELECT EXISTS (
-              SELECT 1 FROM information_schema.table_constraints tc 
-              JOIN information_schema.key_column_usage kcu ON tc.constraint_name = kcu.constraint_name AND tc.table_schema = kcu.table_schema
-              WHERE tc.constraint_type = 'PRIMARY KEY' AND tc.table_name = cols.table_name AND kcu.column_name = cols.column_name
-            )
-          ) as is_primary,
-          (
-            SELECT EXISTS (
-              SELECT 1 FROM information_schema.table_constraints tc 
-              JOIN information_schema.key_column_usage kcu ON tc.constraint_name = kcu.constraint_name AND tc.table_schema = kcu.table_schema
-              WHERE tc.constraint_type = 'FOREIGN KEY' AND tc.table_name = cols.table_name AND kcu.column_name = cols.column_name
-            )
-          ) as is_foreign,
-          (
-            SELECT ccu.table_name || '.' || ccu.column_name 
-            FROM information_schema.table_constraints tc 
-            JOIN information_schema.key_column_usage kcu ON tc.constraint_name = kcu.constraint_name AND tc.table_schema = kcu.table_schema
-            JOIN information_schema.constraint_column_usage ccu ON ccu.constraint_name = tc.constraint_name AND ccu.table_schema = tc.table_schema
-            WHERE tc.constraint_type = 'FOREIGN KEY' AND tc.table_name = cols.table_name AND kcu.column_name = cols.column_name
-            LIMIT 1
-          ) as references_to
-        FROM 
-          information_schema.columns cols
-        JOIN 
-          pg_catalog.pg_class c ON c.relname = cols.table_name
-        JOIN 
-          pg_catalog.pg_namespace n ON n.oid = c.relnamespace
-        WHERE 
-          cols.table_schema = 'public' 
-          AND n.nspname = 'public'
-          AND cols.table_name = $1;
-      `, [tableName]);
+    // 2. Todas as colunas de todas as tabelas em uma única query
+    const columnsRes = await client.query(`
+      SELECT table_name, column_name, data_type, is_nullable
+      FROM information_schema.columns
+      WHERE table_schema = 'public';
+    `);
+    for (const col of columnsRes.rows) {
+      if (!tables[col.table_name]) continue;
+      tables[col.table_name].columns[col.column_name] = {
+        type: col.data_type,
+        isNullable: col.is_nullable === "YES",
+        isPrimaryKey: false,
+        isForeignKey: false,
+        references: null,
+        onDelete: null,
+        cardinality: null,
+        metadata: {}
+      };
+    }
 
-      for (const colRow of columnsRes.rows) {
-        const columnName = colRow.column_name;
-        let metadata: any = {};
+    // 3. Comentários de coluna (etiquetas de metadados) em uma única query
+    const columnCommentsRes = await client.query(`
+      SELECT c.relname AS table_name, a.attname AS column_name,
+             pg_catalog.col_description(c.oid, a.attnum) AS comment
+      FROM pg_catalog.pg_attribute a
+      JOIN pg_catalog.pg_class c ON c.oid = a.attrelid
+      JOIN pg_catalog.pg_namespace n ON n.oid = c.relnamespace
+      WHERE n.nspname = 'public' AND c.relkind = 'r' AND a.attnum > 0 AND NOT a.attisdropped;
+    `);
+    for (const row of columnCommentsRes.rows) {
+      const col = tables[row.table_name]?.columns[row.column_name];
+      if (col) col.metadata = parseMetadataComment(row.comment);
+    }
 
-        // Decodifica o comentário JSON se existir
-        if (colRow.column_comment) {
-          try {
-            const parsed = JSON.parse(colRow.column_comment);
-            metadata = parsed.metadata || parsed;
-          } catch (e) {
-            // Em caso de parse inválido, lança erro no modo strict no extractor principal,
-            // mas aqui apenas repassamos o comentário bruto em formato string
-            metadata = { _raw_comment: colRow.column_comment, _invalid_json: true };
-          }
-        }
-
-        tables[tableName].columns[columnName] = {
-          type: colRow.data_type,
-          isNullable: colRow.is_nullable === "YES",
-          isPrimaryKey: colRow.is_primary,
-          isForeignKey: colRow.is_foreign,
-          references: colRow.references_to || null,
-          metadata
-        };
+    // 4. Comentários de tabela (opções de tabela: soft_delete, owner_field) em uma única query
+    const tableCommentsRes = await client.query(`
+      SELECT c.relname AS table_name, pg_catalog.obj_description(c.oid) AS comment
+      FROM pg_catalog.pg_class c
+      JOIN pg_catalog.pg_namespace n ON n.oid = c.relnamespace
+      WHERE n.nspname = 'public' AND c.relkind = 'r';
+    `);
+    for (const row of tableCommentsRes.rows) {
+      const table = tables[row.table_name];
+      if (!table || !row.comment) continue;
+      const parsed = parseMetadataComment(row.comment);
+      if (parsed && !parsed._invalid_json) {
+        table.options = parsed.options || undefined;
       }
+    }
+
+    // 5. Chaves primárias em uma única query
+    const pkRes = await client.query(`
+      SELECT tc.table_name, kcu.column_name
+      FROM information_schema.table_constraints tc
+      JOIN information_schema.key_column_usage kcu
+        ON tc.constraint_name = kcu.constraint_name AND tc.table_schema = kcu.table_schema
+      WHERE tc.constraint_type = 'PRIMARY KEY' AND tc.table_schema = 'public';
+    `);
+    for (const row of pkRes.rows) {
+      const col = tables[row.table_name]?.columns[row.column_name];
+      if (col) col.isPrimaryKey = true;
+    }
+
+    // 6. Colunas cobertas por constraint UNIQUE (usado para inferir cardinalidade 1:1 de FKs)
+    const uniqueRes = await client.query(`
+      SELECT tc.table_name, kcu.column_name
+      FROM information_schema.table_constraints tc
+      JOIN information_schema.key_column_usage kcu
+        ON tc.constraint_name = kcu.constraint_name AND tc.table_schema = kcu.table_schema
+      WHERE tc.constraint_type = 'UNIQUE' AND tc.table_schema = 'public';
+    `);
+    const uniqueColumns = new Set(uniqueRes.rows.map((r) => `${r.table_name}.${r.column_name}`));
+
+    // 7. Chaves estrangeiras + regra de ON DELETE em uma única query
+    const fkRes = await client.query(`
+      SELECT tc.table_name, kcu.column_name, ccu.table_name AS ref_table, ccu.column_name AS ref_column,
+             rc.delete_rule
+      FROM information_schema.table_constraints tc
+      JOIN information_schema.key_column_usage kcu
+        ON tc.constraint_name = kcu.constraint_name AND tc.table_schema = kcu.table_schema
+      JOIN information_schema.constraint_column_usage ccu
+        ON ccu.constraint_name = tc.constraint_name AND ccu.table_schema = tc.table_schema
+      JOIN information_schema.referential_constraints rc
+        ON rc.constraint_name = tc.constraint_name AND rc.constraint_schema = tc.table_schema
+      WHERE tc.constraint_type = 'FOREIGN KEY' AND tc.table_schema = 'public';
+    `);
+    for (const row of fkRes.rows) {
+      const col = tables[row.table_name]?.columns[row.column_name];
+      if (!col) continue;
+      col.isForeignKey = true;
+      col.references = `${row.ref_table}.${row.ref_column}`;
+      col.onDelete = row.delete_rule || "NO ACTION";
+      col.cardinality = uniqueColumns.has(`${row.table_name}.${row.column_name}`) ? "one-to-one" : "many-to-one";
     }
 
     return tables;
