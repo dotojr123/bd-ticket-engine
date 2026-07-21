@@ -1,0 +1,13 @@
+{
+  "version": "1.2.55",
+  "user_name": "Doto",
+  "chat_language": "pt-br",
+  "doc_language": "Português",
+  "project": "BD-Ticket",
+  "output_folder": "_reversa_sdd",
+  "phase": "done",
+  "completed": ["ideator", "researcher", "drafter", "spec-sdd", "requirements", "clarify", "plan", "to-do", "coding"],
+  "pending": [],
+  "engines": ["antigravity"],
+  "agents": ["reversa-new", "reversa-ideator", "reversa-researcher", "reversa-drafter", "reversa-spec-sdd", "reversa-requirements", "reversa-clarify", "reversa-plan", "reversa-to-do", "reversa-coding"]
+}

@@ -1,0 +1,55 @@
+{
+  "project": "BD-Ticket",
+  "tables": {
+    "test_pedidos": {
+      "columns": {
+        "id": {
+          "isForeignKey": false,
+          "isNullable": true,
+          "isPrimaryKey": true,
+          "metadata": {},
+          "references": null,
+          "type": "integer"
+        },
+        "status": {
+          "isForeignKey": false,
+          "isNullable": false,
+          "isPrimaryKey": false,
+          "metadata": {
+            "label": "Status do Pedido",
+            "permissions": {
+              "read": [
+                "user",
+                "parceiro",
+                "admin"
+              ],
+              "write": [
+                "parceiro",
+                "admin"
+              ]
+            },
+            "ui_control": {
+              "component": "SelectInput",
+              "visible_in_views": [
+                "admin_table",
+                "partner_panel"
+              ]
+            },
+            "validation": {
+              "options": [
+                "pendente",
+                "em_processamento",
+                "concluido",
+                "cancelado"
+              ],
+              "required": true
+            }
+          },
+          "references": null,
+          "type": "text"
+        }
+      }
+    }
+  },
+  "version": "1.0.0"
+}

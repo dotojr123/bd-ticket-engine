@@ -1,0 +1,10 @@
+{
+  "schema-version": 1,
+  "feature-dir": "_reversa_forward/004-fail-fast-validator",
+  "feature-id": "004",
+  "short-name": "fail-fast-validator",
+  "started-at": "2026-07-21T04:55:00Z",
+  "current-stage": "sync",
+  "stages-completed": ["requirements", "clarify", "plan", "to-do", "coding"],
+  "paused-features": []
+}

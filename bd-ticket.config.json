@@ -1,0 +1,24 @@
+{
+  "project": "BD-Ticket-Exemplo",
+  "tables": {
+    "test_pedidos": {
+      "columns": {
+        "status": {
+          "label": "Status do Pedido",
+          "validation": {
+            "required": true,
+            "options": ["pendente", "em_processamento", "concluido", "cancelado"]
+          },
+          "permissions": {
+            "read": ["user", "parceiro", "admin"],
+            "write": ["parceiro", "admin"]
+          },
+          "ui_control": {
+            "component": "SelectInput",
+            "visible_in_views": ["admin_table", "partner_panel"]
+          }
+        }
+      }
+    }
+  }
+}

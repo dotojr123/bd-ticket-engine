@@ -1,0 +1,17 @@
+[project]
+name = "BD-Ticket"
+version = "1.0.0"
+
+[user]
+name = "Doto"
+chat_language = "pt-br"
+doc_language = "Português"
+
+[output]
+folder = "_reversa_sdd"
+
+[specs]
+layout = "feature-folder"
+granularity = "feature"
+scout_suggestion = ""
+decided_at = "2026-07-21T03:51:00Z"
