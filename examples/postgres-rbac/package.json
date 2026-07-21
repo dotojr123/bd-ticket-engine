@@ -1,0 +1,35 @@
+{
+  "name": "bd-ticket-example-postgres-rbac",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Exemplo executável de RBAC com múltiplos papéis, permissão em nível de linha (owner_field) e rate limiting. Roda com SQLite (sem servidor externo), mas o mesmo router funciona idêntico contra Postgres — só troque DB_DRIVER/DATABASE_URL no .env.",
+  "type": "commonjs",
+  "scripts": {
+    "seed": "tsx seed.ts",
+    "db:extract-metadata": "tsx src/bin/extractor.ts --driver sqlite",
+    "db:codegen": "tsx src/bin/codegen.ts",
+    "db:validate": "tsx src/bin/validator.ts",
+    "db:migrate": "tsx src/bin/migrate.ts",
+    "setup": "npm run seed && npm run db:extract-metadata && npm run db:codegen && npm run db:validate",
+    "dev": "tsx server.ts",
+    "token": "tsx mint-token.ts",
+    "demo": "tsx demo.ts"
+  },
+  "dependencies": {
+    "@hono/node-server": "^1.13.0",
+    "@hono/zod-validator": "^0.9.0",
+    "@tanstack/react-query": "^5.101.3",
+    "better-sqlite3": "^12.11.1",
+    "commander": "^15.0.0",
+    "dotenv": "^17.4.2",
+    "hono": "^4.12.31",
+    "picocolors": "^1.1.1",
+    "zod": "^4.4.3"
+  },
+  "devDependencies": {
+    "@types/better-sqlite3": "^7.6.13",
+    "@types/node": "^20.0.0",
+    "tsx": "^4.23.1",
+    "typescript": "^5.5.4"
+  }
+}

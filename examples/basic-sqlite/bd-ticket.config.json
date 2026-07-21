@@ -1,0 +1,48 @@
+{
+  "project": "BD-Ticket-Basic-SQLite-Example",
+  "tables": {
+    "users": {
+      "columns": {
+        "nome": {
+          "label": "Nome",
+          "validation": { "required": true },
+          "permissions": {
+            "read": ["user", "admin"],
+            "write": ["admin"]
+          },
+          "ui_control": {
+            "component": "TextInput",
+            "visible_in_views": ["admin_table"]
+          }
+        },
+        "email": {
+          "label": "E-mail",
+          "validation": { "required": true },
+          "permissions": {
+            "read": ["user", "admin"],
+            "write": ["admin"]
+          },
+          "ui_control": {
+            "component": "TextInput",
+            "visible_in_views": ["admin_table"]
+          }
+        },
+        "status": {
+          "label": "Status",
+          "validation": {
+            "required": true,
+            "options": ["ativo", "inativo"]
+          },
+          "permissions": {
+            "read": ["user", "admin"],
+            "write": ["admin"]
+          },
+          "ui_control": {
+            "component": "SelectInput",
+            "visible_in_views": ["admin_table"]
+          }
+        }
+      }
+    }
+  }
+}

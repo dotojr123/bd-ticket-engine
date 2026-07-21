@@ -7,7 +7,7 @@
 const fs = require("fs");
 const path = require("path");
 
-const BIN_FILES = ["extractor.js", "codegen.js", "validator.js", "migrate.js"];
+const BIN_FILES = ["extractor.js", "codegen.js", "validator.js", "migrate.js", "init.js"];
 const SHEBANG = "#!/usr/bin/env node\n";
 
 for (const file of BIN_FILES) {

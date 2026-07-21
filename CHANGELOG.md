@@ -5,6 +5,22 @@ Formato inspirado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.0.0/)
 
 ## [Não lançado]
 
+### Adicionado (rodada 3 — Plano de Evolução e Excelência: DX, CI/CD, empacotamento, UI, exemplos)
+- **CI/CD real** (`.github/workflows/ci.yml`): matrix Node 20/22, typecheck, testes com cobertura, `npm audit`, scanner de segredos (modo `--all`), build + `npm pack --dry-run`.
+- **Cobertura de testes real**: de 42,6% para 90,7% de statements em `src/lib/**`, com threshold aplicado no Jest. Testes novos para todo módulo que estava em 0% (`manifest`, `drift`, `env-paths`, `logger`, `d1`, `postgres` mockado, `express-router-generator`, `cli-output`, `detect-project`, lógica pura de `inputs.tsx`).
+- **Empacotamento dual CJS/ESM** via `tsup` (`src/index.ts`, `src/components/index.ts`, `exports` map em `package.json`), validado com `require`/`import` reais via self-reference do pacote. `pg`/`better-sqlite3` convertidos para `require()` lazy para não forçar as duas dependências nativas simultaneamente.
+- **`npx bd-ticket-init`**: wizard interativo (`@clack/prompts`) que detecta framework/driver, lista tabelas reais do banco, gera `.env` e roda o transplante — lógica de cópia extraída para `scripts/transplant-core.js`, compartilhada com `transplant.js`.
+- **Cores ANSI e hyperlinks de terminal** (`src/lib/utils/cli-output.ts`, `picocolors`) nos quatro CLIs, com mensagens de erro mais acionáveis (extractor sem `DATABASE_URL`, SQLite inexistente, etc.).
+- **Sete novos componentes headless** em `src/components/inputs.tsx` (`DateInput`, `DateTimeInput`, `TextareaInput`, `NumberInput`, `ToggleSwitch`, `MultiSelectInput`, `AutocompleteSelect`, `FileUploadInput`), sem visual fixo embutido, integrados ao `ui_control.component` do `<DynamicForm />`.
+- **Três exemplos executáveis** em `/examples` (`basic-sqlite`, `postgres-rbac`, `react-frontend`), cada um validado rodando de ponta a ponta (não pseudocódigo) — `postgres-rbac` inclusive revelou um bug real do motor (ver "Corrigido").
+- Tutorial `docs/zero-to-hero.md` e seção "Advanced Patterns" em `docs/metadata-schema.md`.
+- `.github/dependabot.yml`, `SECURITY.md`, templates de issue/PR, `CODE_OF_CONDUCT.md`, `ROADMAP.md` público.
+
+### Corrigido (rodada 3)
+- **Bug real**: a coluna de `options.owner_field` era obrigatória no Insert Schema (Zod) mesmo sendo auto-preenchida pelo `crud-engine` a partir do JWT — o `zValidator` rejeitava a requisição antes do auto-preenchimento rodar, tornando esse recurso (documentado desde a rodada 2) inatingível via API. Encontrado rodando `examples/postgres-rbac` de ponta a ponta; corrigido em `src/lib/codegen/schema-generator.ts` (lógica extraída de `codegen.ts` para ficar testável), com testes de regressão.
+- `scan-secrets.js`: novo modo `--all` (varre o checkout inteiro) para uso em CI, onde não existe "diff staged"; achou e corrigiu um falso positivo real em `_reversa_forward/001-metadata-extractor/onboarding.md`.
+- `extractor.ts` não cria mais silenciosamente um `local.db` vazio quando o caminho apontado não existe — agora retorna um erro claro com o comando de correção sugerido.
+
 ### Adicionado (rodada 2 — itens que haviam ficado de fora da primeira rodada)
 - **Drizzle ORM** (`src/lib/codegen/drizzle-generator.ts`, flag `--drizzle <postgres|sqlite>` no codegen): gera `src/contracts/drizzle/<tabela>.ts` com schema tipado real a partir do `metadata.json`, como camada adicional e opcional ao `crud-engine` genérico. Validado executando insert/select tipados reais contra SQLite (`tests/integration-drizzle.test.ts`).
 - **Suporte multi-ambiente** (`src/lib/utils/env-paths.ts`, flag `--env` em extractor/codegen/migrate): isola metadata/histórico/migrações por ambiente nomeado (`_reversa_sdd/<env>/`, `migrations/<env>/`) e carrega `.env.<env>` por cima do `.env` base.

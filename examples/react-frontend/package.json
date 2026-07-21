@@ -1,0 +1,28 @@
+{
+  "name": "bd-ticket-example-react-frontend",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Exemplo executável: <DynamicForm /> + hooks React Query gerados, consumindo o backend do exemplo basic-sqlite.",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc && vite build"
+  },
+  "dependencies": {
+    "@hookform/resolvers": "^5.4.0",
+    "@tanstack/react-query": "^5.101.3",
+    "clsx": "^2.1.1",
+    "react": "^19.2.7",
+    "react-dom": "^19.2.7",
+    "react-hook-form": "^7.82.0",
+    "tailwind-merge": "^3.6.0",
+    "zod": "^4.4.3"
+  },
+  "devDependencies": {
+    "@types/react": "^19.2.17",
+    "@types/react-dom": "^19.2.3",
+    "@vitejs/plugin-react": "^4.3.0",
+    "typescript": "^5.5.4",
+    "vite": "^6.0.0"
+  }
+}

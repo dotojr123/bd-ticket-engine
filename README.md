@@ -3,6 +3,7 @@
   <p><strong>A Schema-Driven Type-Safe Engine for Modern Fullstack Web Apps</strong></p>
 
   <p>
+    <a href="https://github.com/dotojr123/bd-ticket-engine/actions/workflows/ci.yml"><img src="https://github.com/dotojr123/bd-ticket-engine/actions/workflows/ci.yml/badge.svg" alt="CI" /></a>
     <a href="https://typescriptlang.org"><img src="https://img.shields.io/badge/TypeScript-5.5+-blue?style=for-the-badge&logo=typescript" alt="TypeScript" /></a>
     <a href="https://nodejs.org"><img src="https://img.shields.io/badge/Node.js-20+-green?style=for-the-badge&logo=node.js" alt="Node.js" /></a>
     <a href="https://hono.dev"><img src="https://img.shields.io/badge/Hono-API-orange?style=for-the-badge&logo=hono" alt="Hono" /></a>
@@ -53,7 +54,21 @@ Para injetar o motor do **BD-Ticket Engine** dentro de qualquer repositório de 
 npx tsx scripts/transplant.js --target ../seu-projeto-alvo
 ```
 
-O script criará a estrutura física de arquivos, injetará os scripts npm utilitários no `package.json` de destino e listará as dependências necessárias de instalação.
+O script criará a estrutura física de arquivos, injetará os scripts npm utilitários no `package.json` de destino e listará as dependências necessárias de instalação. Prefere um passo a passo interativo? `npx bd-ticket-init` faz as mesmas perguntas (framework, driver de banco, tabelas a incluir) com um wizard guiado.
+
+**Novo no motor?** Siga o [tutorial Zero to Hero](docs/zero-to-hero.md) — de um diretório vazio a uma API CRUD real rodando em menos de 10 minutos, sem Docker.
+
+---
+
+## 📦 Exemplos Executáveis
+
+| Exemplo | O que demonstra |
+|---------|------------------|
+| [`examples/basic-sqlite`](examples/basic-sqlite) | Fluxo mínimo: SQLite → metadata → codegen → servidor Hono com CRUD real. `npm install && npm run setup && npm run dev`. |
+| [`examples/postgres-rbac`](examples/postgres-rbac) | RBAC com múltiplos papéis, permissão em nível de linha (`owner_field`) e rate limiting — com um script (`npm run demo`) que exercita tudo isso automaticamente. |
+| [`examples/react-frontend`](examples/react-frontend) | `<DynamicForm />` + hooks React Query gerados, consumindo o backend do `basic-sqlite` — zero `fetch` escrito à mão. |
+
+Cada exemplo tem seu próprio `README.md` com os passos exatos e foi validado rodando de ponta a ponta (não é pseudocódigo).
 
 ---
 

@@ -3,26 +3,45 @@
   "version": "1.0.0",
   "description": "Motor Schema-Driven que gera validações Zod, tipos TS, rotas Hono/Express com CRUD real e hooks React Query a partir de metadados de banco PostgreSQL/SQLite.",
   "scripts": {
-    "build": "tsc -p tsconfig.build.json && node scripts/add-shebangs.js",
+    "build": "npm run build:cli && npm run build:lib",
+    "build:cli": "tsc -p tsconfig.build.json && node scripts/add-shebangs.js",
+    "build:lib": "tsup",
     "db:codegen": "tsx src/bin/codegen.ts",
     "db:extract-metadata": "tsx src/bin/extractor.ts",
     "db:validate": "tsx src/bin/validator.ts",
     "db:migrate": "tsx src/bin/migrate.ts",
     "test": "jest",
+    "test:coverage": "jest --coverage",
     "typecheck": "tsc -p tsconfig.build.json --noEmit",
     "scan:secrets": "node scripts/scan-secrets.js",
     "prepare": "husky",
     "prepublishOnly": "npm run typecheck && npm test && npm run build"
   },
   "bin": {
+    "bd-ticket-init": "dist/bin/init.js",
     "bd-ticket-extract": "dist/bin/extractor.js",
     "bd-ticket-codegen": "dist/bin/codegen.js",
     "bd-ticket-validate": "dist/bin/validator.js",
     "bd-ticket-migrate": "dist/bin/migrate.js"
   },
+  "main": "./dist/index.js",
+  "module": "./dist/index.mjs",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": { "types": "./dist/index.d.mts", "default": "./dist/index.mjs" },
+      "require": { "types": "./dist/index.d.ts", "default": "./dist/index.js" }
+    },
+    "./ui": {
+      "import": { "types": "./dist/components/index.d.mts", "default": "./dist/components/index.mjs" },
+      "require": { "types": "./dist/components/index.d.ts", "default": "./dist/components/index.js" }
+    },
+    "./package.json": "./package.json"
+  },
   "files": [
     "dist",
     "scripts/transplant.js",
+    "scripts/transplant-core.js",
     "LICENSE",
     "README.md",
     "CHANGELOG.md",
@@ -45,23 +64,43 @@
   },
   "type": "commonjs",
   "dependencies": {
+    "@clack/prompts": "^1.7.0",
+    "commander": "^15.0.0",
+    "dotenv": "^17.4.2",
+    "hono": "^4.12.31",
+    "picocolors": "^1.1.1",
+    "zod": "^4.4.3"
+  },
+  "peerDependencies": {
     "@hono/zod-validator": "^0.9.0",
     "@hookform/resolvers": "^5.4.0",
     "@tanstack/react-query": "^5.101.3",
     "better-sqlite3": "^12.11.1",
     "clsx": "^2.1.1",
-    "commander": "^15.0.0",
-    "dotenv": "^17.4.2",
     "drizzle-orm": "^0.45.2",
-    "hono": "^4.12.31",
     "pg": "^8.22.0",
     "react": "^19.2.7",
     "react-dom": "^19.2.7",
     "react-hook-form": "^7.82.0",
-    "tailwind-merge": "^3.6.0",
-    "zod": "^4.4.3"
+    "tailwind-merge": "^3.6.0"
+  },
+  "peerDependenciesMeta": {
+    "@hono/zod-validator": { "optional": true },
+    "@hookform/resolvers": { "optional": true },
+    "@tanstack/react-query": { "optional": true },
+    "better-sqlite3": { "optional": true },
+    "clsx": { "optional": true },
+    "drizzle-orm": { "optional": true },
+    "pg": { "optional": true },
+    "react": { "optional": true },
+    "react-dom": { "optional": true },
+    "react-hook-form": { "optional": true },
+    "tailwind-merge": { "optional": true }
   },
   "devDependencies": {
+    "@hono/zod-validator": "^0.9.0",
+    "@hookform/resolvers": "^5.4.0",
+    "@tanstack/react-query": "^5.101.3",
     "@types/better-sqlite3": "^7.6.13",
     "@types/express": "^5.0.6",
     "@types/jest": "^30.0.0",
@@ -70,12 +109,21 @@
     "@types/react": "^19.2.17",
     "@types/react-dom": "^19.2.3",
     "@types/supertest": "^7.2.1",
+    "better-sqlite3": "^12.11.1",
+    "clsx": "^2.1.1",
+    "drizzle-orm": "^0.45.2",
     "express": "^5.2.1",
     "husky": "^9.1.7",
     "jest": "^30.4.2",
+    "pg": "^8.22.0",
     "pg-mem": "^3.0.14",
+    "react": "^19.2.7",
+    "react-dom": "^19.2.7",
+    "react-hook-form": "^7.82.0",
     "supertest": "^7.2.2",
+    "tailwind-merge": "^3.6.0",
     "ts-jest": "^29.4.11",
+    "tsup": "^8.5.1",
     "tsx": "^4.23.1",
     "typescript": "^5.5.4"
   }

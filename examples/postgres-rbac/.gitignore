@@ -1,0 +1,9 @@
+node_modules/
+local.db
+.env
+_reversa_sdd/
+src/contracts/schemas/
+src/contracts/types/
+src/contracts/router/
+src/contracts/hooks/
+src/contracts/manifest.json

@@ -6,6 +6,7 @@ jspm_packages/
 dist/
 out/
 build/
+coverage/
 tests/**/*.js
 tests/**/*.js.map
 tests/**/*.d.ts

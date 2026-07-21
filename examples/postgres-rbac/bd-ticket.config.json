@@ -1,0 +1,39 @@
+{
+  "project": "BD-Ticket-Postgres-RBAC-Example",
+  "tables": {
+    "tasks": {
+      "options": {
+        "owner_field": "owner_id"
+      },
+      "columns": {
+        "titulo": {
+          "label": "Título",
+          "validation": { "required": true },
+          "permissions": {
+            "read": ["user", "manager", "admin"],
+            "write": ["user", "manager", "admin"]
+          },
+          "ui_control": { "component": "TextInput" }
+        },
+        "status": {
+          "label": "Status",
+          "validation": { "required": true, "options": ["pendente", "concluida"] },
+          "permissions": {
+            "read": ["user", "manager", "admin"],
+            "write": ["user", "manager", "admin"]
+          },
+          "ui_control": { "component": "SelectInput" }
+        },
+        "owner_id": {
+          "label": "Dono da tarefa",
+          "validation": { "required": true },
+          "permissions": {
+            "read": ["manager", "admin"],
+            "write": ["admin"]
+          },
+          "ui_control": { "component": "TextInput" }
+        }
+      }
+    }
+  }
+}
